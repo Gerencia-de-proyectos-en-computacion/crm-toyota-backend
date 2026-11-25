@@ -20,8 +20,8 @@ Base URL local: `http://localhost:8080` | Swagger UI: `/swagger-ui.html` | OpenA
 
 ## 4. Catálogo OEM/Equivalentes, Kits y Almacén (`CatalogInventoryController`)
 - `GET /api/v1/parts?q=&category=&vehicleId=` *(Autenticado)* — Filtra repuestos compatibles por modelo/año/versión, calcula semáforo híbrido (`CRITICO`, `ALERTA`, `NORMAL`) y adjunta `availableEquivalents` agrupados por `oem_reference_code`.
-- `POST /api/v1/parts` y `PUT /api/v1/parts/{id}` *(`ADMIN`, `ALMACEN`)* — Gestión de catálogo.
-- `GET /api/v1/labor-rates` *(Autenticado)* y `POST /api/v1/labor-rates` *(`ADMIN`)* — Tarifario estándar de mano de obra con IGV incluido.
+- `POST /api/v1/parts` y `PUT /api/v1/parts/{id}` *(`ADMIN` exclusivo)* — Creación de repuestos y actualización de precios de venta (`salePriceIgv`) y stock mínimo; preserva compatibilidades vehiculares si no se reenvían.
+- `GET /api/v1/labor-rates` *(Autenticado)*, `POST /api/v1/labor-rates` y `PUT /api/v1/labor-rates/{id}` *(`ADMIN` exclusivo)* — Tarifario estándar de mano de obra con IGV incluido.
 - `GET /api/v1/maintenance-kits` y `GET /api/v1/maintenance-kits/suggest?model=&mileageKm=` *(Autenticado)* — Paquetes preventivos Toyota sugeridos por kilometraje (`EXT01`).
 - `POST /api/v1/inventory/replenishments` y `GET /api/v1/inventory/movements` *(`ADMIN`, `ALMACEN`)* — Ingreso rápido de compras de stock (`EXT04`) y kardex auditable.
 

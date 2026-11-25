@@ -80,7 +80,7 @@ public class CatalogInventoryService {
             throw new DuplicateResourceException("Ya existe un repuesto con SKU " + normalizedSku);
         }
         Part part = new Part();
-        applyPartFields(part, req, normalizedSku);
+        applyPartFields(part, req, normalizedSku, true);
         Part saved = partRepository.save(part);
         return toPartResponse(saved, null, Map.of());
     }
@@ -93,7 +93,7 @@ public class CatalogInventoryService {
         if (!part.getSku().equalsIgnoreCase(normalizedSku) && partRepository.existsBySkuIgnoreCase(normalizedSku)) {
             throw new DuplicateResourceException("Ya existe un repuesto con SKU " + normalizedSku);
         }
-        applyPartFields(part, req, normalizedSku);
+        applyPartFields(part, req, normalizedSku, false);
         Integer rop = demandForecastRepository.findByPartId(id).map(DemandForecast::getReorderPoint).orElse(null);
         return toPartResponse(partRepository.save(part), rop, rop != null ? Map.of(id, rop) : Map.of());
     }
@@ -118,6 +118,22 @@ public class CatalogInventoryService {
         lr.setIntervalKm(req.intervalKm());
         lr.setPriceIgv(req.priceIgv());
         lr.setActive(true);
+        return toLaborResponse(laborRateRepository.save(lr));
+    }
+
+    @Transactional
+    public LaborRateResponse updateLaborRate(Long id, LaborRateRequest req) {
+        LaborRate lr = laborRateRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tarifa de mano de obra no encontrada: " + id));
+        String code = req.code().trim().toUpperCase();
+        if (!lr.getCode().equalsIgnoreCase(code) && laborRateRepository.existsByCodeIgnoreCase(code)) {
+            throw new DuplicateResourceException("Ya existe una tarifa de mano de obra con código " + code);
+        }
+        lr.setCode(code);
+        lr.setServiceName(req.serviceName().trim());
+        lr.setEstimatedHours(req.estimatedHours());
+        lr.setIntervalKm(req.intervalKm());
+        lr.setPriceIgv(req.priceIgv());
         return toLaborResponse(laborRateRepository.save(lr));
     }
 
@@ -201,7 +217,7 @@ public class CatalogInventoryService {
         );
     }
 
-    private void applyPartFields(Part part, PartRequest req, String normalizedSku) {
+    private void applyPartFields(Part part, PartRequest req, String normalizedSku, boolean isCreate) {
         part.setSku(normalizedSku);
         part.setOemReferenceCode(req.oemReferenceCode().trim().toUpperCase());
         part.setBrand(req.brand());
@@ -212,8 +228,8 @@ public class CatalogInventoryService {
         part.setCurrentStock(req.currentStock());
         part.setMinStock(req.minStock());
         part.setActive(true);
-        part.getCompatibilities().clear();
         if (req.compatibilities() != null && !req.compatibilities().isEmpty()) {
+            part.getCompatibilities().clear();
             for (CompatibilitySpec spec : req.compatibilities()) {
                 PartCompatibility pc = new PartCompatibility();
                 pc.setPart(part);
@@ -223,7 +239,8 @@ public class CatalogInventoryService {
                 pc.setTrimVersion(spec.trimVersion() != null && !spec.trimVersion().isBlank() ? spec.trimVersion().trim() : "ALL");
                 part.getCompatibilities().add(pc);
             }
-        } else {
+        } else if (isCreate || part.getCompatibilities().isEmpty()) {
+            part.getCompatibilities().clear();
             PartCompatibility universal = new PartCompatibility();
             universal.setPart(part);
             universal.setModel("ALL");

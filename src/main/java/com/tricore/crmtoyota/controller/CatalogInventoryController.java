@@ -35,15 +35,15 @@ public class CatalogInventoryController {
 
     @PostMapping("/parts")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN', 'ALMACEN')")
-    @Operation(summary = "Crear repuesto en catálogo (ADMIN / ALMACEN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Crear repuesto en catálogo y definir precio de venta (solo ADMIN)")
     public PartResponse createPart(@Valid @RequestBody PartRequest request) {
         return service.createPart(request);
     }
 
     @PutMapping("/parts/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ALMACEN')")
-    @Operation(summary = "Actualizar repuesto en catálogo (ADMIN / ALMACEN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Actualizar precio de venta y datos de repuesto en catálogo (solo ADMIN)")
     public PartResponse updatePart(@PathVariable Long id, @Valid @RequestBody PartRequest request) {
         return service.updatePart(id, request);
     }
@@ -60,6 +60,13 @@ public class CatalogInventoryController {
     @Operation(summary = "Registrar tarifa estándar de mano de obra (solo ADMIN)")
     public LaborRateResponse createLaborRate(@Valid @RequestBody LaborRateRequest request) {
         return service.createLaborRate(request);
+    }
+
+    @PutMapping("/labor-rates/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Actualizar tarifa estándar de mano de obra (solo ADMIN)")
+    public LaborRateResponse updateLaborRate(@PathVariable Long id, @Valid @RequestBody LaborRateRequest request) {
+        return service.updateLaborRate(id, request);
     }
 
     @GetMapping("/maintenance-kits")

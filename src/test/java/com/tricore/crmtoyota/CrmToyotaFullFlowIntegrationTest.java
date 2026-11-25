@@ -243,7 +243,41 @@ class CrmToyotaFullFlowIntegrationTest {
             assertThat(closedPdfText).contains("Fecha de atención / cierre:");
         }
 
-        // 10. Warehouse Stock Replenishment (EXT04) + Movements + ML Forecast Dashboard & Recalculate
+        // 10. RBAC Catalog Pricing Guard: ALMACEN cannot change part prices (403), only ADMIN (200)
+        var priceUpdateReq = new PartRequest(
+                "TOY-FIL-041", "04152-YZZA6", PartBrand.TOYOTA_OEM, "Filtro de Aceite Cartucho",
+                "Filtros", "Yaris, Corolla, RAV4", new BigDecimal("48.00"), 18, 6, null
+        );
+        mockMvc.perform(put("/api/v1/parts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + almacenToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(priceUpdateReq)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(put("/api/v1/parts/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(priceUpdateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.salePriceIgv").value(48.00));
+
+        var laborUpdateReq = new LaborRateRequest(
+                "MO-MANT-10K", "Mantenimiento Preventivo 10,000 km Toyota", new BigDecimal("1.00"), 10000, new BigDecimal("70.00")
+        );
+        mockMvc.perform(put("/api/v1/labor-rates/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + almacenToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(laborUpdateReq)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(put("/api/v1/labor-rates/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(laborUpdateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priceIgv").value(70.00));
+
+        // 11. Warehouse Stock Replenishment (EXT04) + Movements + ML Forecast Dashboard & Recalculate
         var repReq = new StockReplenishmentRequest(
                 6L, 25, "Importaciones Nipón SAC", "FAC-F002-00891", new BigDecimal("110.00")
         );

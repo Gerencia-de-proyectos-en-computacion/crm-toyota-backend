@@ -167,6 +167,24 @@ class ServiceEdgeCasesCoverageTest {
                 "MO-ALIN-3D", "Dup", new BigDecimal("0.75"), null, new BigDecimal("70.00")
         ))).isInstanceOf(DuplicateResourceException.class);
 
+        var updatedLabor = catalogInventoryService.updateLaborRate(createdLabor.id(), new LaborRateRequest(
+                "MO-ALIN-3D-V2", "Alineamiento 3D Actualizado", new BigDecimal("1.00"), 10000, new BigDecimal("85.00")
+        ));
+        assertThat(updatedLabor.priceIgv()).isEqualByComparingTo("85.00");
+        assertThatThrownBy(() -> catalogInventoryService.updateLaborRate(createdLabor.id(), new LaborRateRequest(
+                "MO-MANT-10K", "Dup", new BigDecimal("1.00"), null, new BigDecimal("85.00")
+        ))).isInstanceOf(DuplicateResourceException.class);
+        assertThatThrownBy(() -> catalogInventoryService.updateLaborRate(9999L, new LaborRateRequest(
+                "MO-NO-EXISTE", "X", new BigDecimal("1.00"), null, new BigDecimal("85.00")
+        ))).isInstanceOf(ResourceNotFoundException.class);
+
+        // Update part preserving existing compatibilities when compatibilities is null
+        var preservedPart = catalogInventoryService.updatePart(updatedPart.id(), new PartRequest(
+                "ALT-FIL-998", "04152-YZZA6", PartBrand.ALTERNATIVO, "Filtro Económico V3",
+                "Filtros", "Yaris", new BigDecimal("32.00"), 15, 4, null
+        ));
+        assertThat(preservedPart.salePriceIgv()).isEqualByComparingTo("32.00");
+
         // Quotes listing, filtering, updating PENDIENTE, rejecting PENDIENTE, and state errors
         assertThat(quoteService.listQuotes(QuoteStatus.PENDIENTE, "Yaris")).isNotEmpty();
         assertThat(quoteService.listQuotes(null, "")).isNotEmpty();
