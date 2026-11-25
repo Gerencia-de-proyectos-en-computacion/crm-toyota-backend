@@ -252,8 +252,10 @@ public class QuoteService {
         if (quote.getStatus() != QuoteStatus.APROBADA) {
             throw new BusinessRuleException("Solo una cotización APROBADA puede pasar a estado CERRADA.");
         }
+        OffsetDateTime now = OffsetDateTime.now();
         quote.setStatus(QuoteStatus.CERRADA);
-        quote.setUpdatedAt(OffsetDateTime.now());
+        quote.setClosedAt(now);
+        quote.setUpdatedAt(now);
         return toQuoteResponse(quoteRepository.save(quote), workshopSettingsService.getEntity());
     }
 
@@ -400,6 +402,7 @@ public class QuoteService {
                 waUrl,
                 q.getCreatedAt(),
                 q.getUpdatedAt(),
+                q.getClosedAt(),
                 itemDtos
         );
     }

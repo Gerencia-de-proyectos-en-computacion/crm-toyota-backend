@@ -31,8 +31,8 @@ Base URL local: `http://localhost:8080` | Swagger UI: `/swagger-ui.html` | OpenA
 - `POST /api/v1/quotes/{id}/approve` *(`ADMIN`, `RECEPCIONISTA`)* — Transacción `@Transactional` + `@Version`: si falta stock responde `409 Conflict` (`INSUFFICIENT_STOCK`) con equivalentes disponibles sin pasar a rechazada; si alcanza, descuenta stock y registra salida en kardex.
 - `POST /api/v1/quotes/{id}/substitute-part` *(`ADMIN`, `RECEPCIONISTA`)* — Sustituye en 1 clic un repuesto agotado por su equivalente disponible y aprueba opcionalmente en el mismo paso.
 - `POST /api/v1/quotes/{id}/reject` *(`ADMIN`, `RECEPCIONISTA`)* — Exige `rejectionReason` (`EXT03`); si venía de `APROBADA`, **reintegra atómicamente el stock** al almacén.
-- `POST /api/v1/quotes/{id}/close` *(`ADMIN`, `RECEPCIONISTA`)* — Cierre comercial (`APROBADA -> CERRADA`).
-- `GET /api/v1/quotes/{id}/pdf` *(`ADMIN`, `RECEPCIONISTA`)* — Descarga proforma A4 en OpenPDF (`< 3s`) con marca blanca y aviso legal sin valor tributario SUNAT.
+- `POST /api/v1/quotes/{id}/close` *(`ADMIN`, `RECEPCIONISTA`)* — Cierre comercial (`APROBADA -> CERRADA`) registrando `closedAt` (fecha y hora exacta de atención).
+- `GET /api/v1/quotes/{id}/pdf` *(`ADMIN`, `RECEPCIONISTA`)* — Descarga proforma A4 en OpenPDF (`< 3s`) con marca blanca, fecha de atención/cierre cuando está `CERRADA` (zona horaria `America/Lima`) y aviso legal sin valor tributario SUNAT.
 
 ## 6. Dashboard de Pronóstico ML Batch (`ForecastDashboardController`)
 - `GET /api/v1/forecasts/dashboard` *(`ADMIN`, `ALMACEN`)* — Lectura `< 500ms` desde `demand_forecasts` y `ml_model_runs`: métricas (`R2`, `WAPE`, `RMSE`, `MAPE>0`, `ADI`), KPIs de riesgo crítico/alerta, ventas perdidas por `FALTA_STOCK`, tasa de conversión y tabla priorizada de reorden.

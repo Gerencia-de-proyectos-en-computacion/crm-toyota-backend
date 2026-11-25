@@ -76,6 +76,9 @@ public class Quote {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "closed_at")
+    private OffsetDateTime closedAt;
+
     @OneToMany(mappedBy = "quote", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<QuoteItem> items = new ArrayList<>();
 
@@ -125,6 +128,8 @@ public class Quote {
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public OffsetDateTime getClosedAt() { return closedAt; }
+    public void setClosedAt(OffsetDateTime closedAt) { this.closedAt = closedAt; }
     public List<QuoteItem> getItems() { return items; }
     public void setItems(List<QuoteItem> items) { this.items = items; }
 }

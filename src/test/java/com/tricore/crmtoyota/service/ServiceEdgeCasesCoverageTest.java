@@ -207,6 +207,12 @@ class ServiceEdgeCasesCoverageTest {
         byte[] pdfNoDiscount = quotePdfService.generateQuotePdf(5L);
         assertThat(pdfNoDiscount).isNotEmpty();
 
+        // Also cover CERRADA PDF fallback when closedAt is null vs populated (#2 is CERRADA)
+        var closedEntity = quoteService.getQuoteEntity(2L);
+        closedEntity.setClosedAt(null);
+        byte[] pdfClosedFallback = quotePdfService.generateQuotePdf(2L);
+        assertThat(pdfClosedFallback).isNotEmpty();
+
         var rejectedPending = quoteService.rejectQuote(5L,
                 new QuoteRejectRequest(RejectionReason.TIEMPO_ESPERA, null), "recepcion");
         assertThat(rejectedPending.status()).isEqualTo(QuoteStatus.RECHAZADA);

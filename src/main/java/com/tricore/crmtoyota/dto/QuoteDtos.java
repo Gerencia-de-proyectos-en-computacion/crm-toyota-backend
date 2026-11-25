@@ -97,6 +97,7 @@ public final class QuoteDtos {
             String whatsappUrl,
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt,
+            OffsetDateTime closedAt,
             List<QuoteItemResponse> items
     ) {}
 

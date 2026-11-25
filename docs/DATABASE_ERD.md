@@ -83,6 +83,7 @@ erDiagram
         numeric discount_percent
         numeric final_total_igv
         date valid_until
+        timestamptz closed_at "Fecha de atención / cierre"
     }
     QUOTE_ITEMS {
         bigint id PK

@@ -11,12 +11,15 @@ import com.tricore.crmtoyota.domain.entity.Quote;
 import com.tricore.crmtoyota.domain.entity.QuoteItem;
 import com.tricore.crmtoyota.domain.entity.Vehicle;
 import com.tricore.crmtoyota.domain.entity.WorkshopSettings;
+import com.tricore.crmtoyota.domain.enums.QuoteStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 @Service
@@ -26,6 +29,9 @@ public class QuotePdfService {
     private static final Color SLATE_DARK = new Color(15, 23, 42);
     private static final Color SLATE_LIGHT = new Color(241, 245, 249);
     private static final Color BORDER_GRAY = new Color(203, 213, 225);
+    private static final Color CLOSED_GREEN = new Color(21, 128, 61);
+    private static final ZoneId LIMA_ZONE = ZoneId.of("America/Lima");
+    private static final DateTimeFormatter CLOSED_DATE_TIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final QuoteService quoteService;
     private final WorkshopSettingsService workshopSettingsService;
@@ -53,7 +59,15 @@ public class QuotePdfService {
         Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, SLATE_DARK);
         Font bodyFont = FontFactory.getFont(FontFactory.HELVETICA, 9, SLATE_DARK);
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, SLATE_DARK);
+        Font closedFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, CLOSED_GREEN);
         Font totalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, TOYOTA_RED);
+
+        boolean isClosed = quote.getStatus() == QuoteStatus.CERRADA;
+        String closedDateTimeFormatted = null;
+        if (isClosed) {
+            OffsetDateTime closedRef = quote.getClosedAt() != null ? quote.getClosedAt() : quote.getUpdatedAt();
+            closedDateTimeFormatted = closedRef.atZoneSameInstant(LIMA_ZONE).format(CLOSED_DATE_TIME_FMT);
+        }
 
         // 1. Header White-Label + Quote Number Box
         PdfPTable header = new PdfPTable(new float[]{65f, 35f});
@@ -81,6 +95,11 @@ public class QuotePdfService {
         rightHeader.addElement(pType);
         rightHeader.addElement(pNum);
         rightHeader.addElement(pStat);
+        if (isClosed) {
+            Paragraph pClosed = new Paragraph("Atendida: " + closedDateTimeFormatted, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.WHITE));
+            pClosed.setAlignment(Element.ALIGN_CENTER);
+            rightHeader.addElement(pClosed);
+        }
         header.addCell(rightHeader);
 
         doc.add(header);
@@ -104,10 +123,14 @@ public class QuotePdfService {
         vehBox.setBackgroundColor(SLATE_LIGHT);
         vehBox.setBorderColor(BORDER_GRAY);
         vehBox.setPadding(8f);
-        vehBox.addElement(new Paragraph("VEHÍCULO TOYOTA & VIGENCIA", sectionFont));
+        vehBox.addElement(new Paragraph(isClosed ? "VEHÍCULO TOYOTA & ATENCIÓN" : "VEHÍCULO TOYOTA & VIGENCIA", sectionFont));
         vehBox.addElement(new Paragraph("Placa: " + vehicle.getLicensePlate() + " | Toyota " + vehicle.getModel() + " " + vehicle.getTrimVersion() + " (" + vehicle.getManufactureYear() + ")", bodyFont));
         vehBox.addElement(new Paragraph("Kilometraje registrado: " + String.format("%,d km", quote.getMileageAtQuote()), bodyFont));
-        vehBox.addElement(new Paragraph("Válida hasta: " + quote.getValidUntil().format(DateTimeFormatter.ISO_LOCAL_DATE) + " (7 días calendario)", boldFont));
+        if (isClosed) {
+            vehBox.addElement(new Paragraph("Fecha de atención / cierre: " + closedDateTimeFormatted, closedFont));
+        } else {
+            vehBox.addElement(new Paragraph("Válida hasta: " + quote.getValidUntil().format(DateTimeFormatter.ISO_LOCAL_DATE) + " (7 días calendario)", boldFont));
+        }
         meta.addCell(vehBox);
 
         doc.add(meta);

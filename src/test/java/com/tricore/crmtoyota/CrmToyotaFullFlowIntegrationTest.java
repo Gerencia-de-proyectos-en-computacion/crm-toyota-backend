@@ -2,6 +2,8 @@ package com.tricore.crmtoyota;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import com.tricore.crmtoyota.domain.enums.*;
 import com.tricore.crmtoyota.dto.AuthDtos.LoginRequest;
 import com.tricore.crmtoyota.dto.CatalogDtos.*;
@@ -195,7 +197,7 @@ class CrmToyotaFullFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APROBADA"));
 
-        // Verify PDF generation (< 3 seconds, non-empty PDF bytes)
+        // Verify PDF generation (< 3 seconds, non-empty PDF bytes, NOT showing closed date while APROBADA)
         long startMs = System.currentTimeMillis();
         MvcResult pdfRes = mockMvc.perform(get("/api/v1/quotes/" + quoteId + "/pdf")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + recepToken))
@@ -204,7 +206,13 @@ class CrmToyotaFullFlowIntegrationTest {
                 .andReturn();
         long elapsedMs = System.currentTimeMillis() - startMs;
         assertThat(elapsedMs).isLessThan(3000L);
-        assertThat(pdfRes.getResponse().getContentAsByteArray().length).isGreaterThan(1000);
+        byte[] approvedPdfBytes = pdfRes.getResponse().getContentAsByteArray();
+        assertThat(approvedPdfBytes.length).isGreaterThan(1000);
+        try (PdfReader approvedReader = new PdfReader(approvedPdfBytes)) {
+            String approvedPdfText = new PdfTextExtractor(approvedReader).getTextFromPage(1);
+            assertThat(approvedPdfText).contains("Válida hasta:");
+            assertThat(approvedPdfText).doesNotContain("Fecha de atención / cierre:");
+        }
 
         // 8. Revert APROBADA -> RECHAZADA (atomically restores stock to part #8 back to 6)
         var rejectReq = new QuoteRejectRequest(RejectionReason.PRECIO, "Cliente decidió postergar servicio");
@@ -216,11 +224,24 @@ class CrmToyotaFullFlowIntegrationTest {
                 .andExpect(jsonPath("$.status").value("RECHAZADA"))
                 .andExpect(jsonPath("$.rejectionReason").value("PRECIO"));
 
-        // 9. Close an approved seed quote (#4 COT-2026-00040 -> CERRADA)
+        // 9. Close an approved seed quote (#4 COT-2026-00040 -> CERRADA) and verify closedAt + PDF attention date
         mockMvc.perform(post("/api/v1/quotes/4/close")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + recepToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CERRADA"));
+                .andExpect(jsonPath("$.status").value("CERRADA"))
+                .andExpect(jsonPath("$.closedAt").isNotEmpty());
+
+        MvcResult closedPdfRes = mockMvc.perform(get("/api/v1/quotes/4/pdf")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + recepToken))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andReturn();
+        try (PdfReader closedReader = new PdfReader(closedPdfRes.getResponse().getContentAsByteArray())) {
+            String closedPdfText = new PdfTextExtractor(closedReader).getTextFromPage(1);
+            assertThat(closedPdfText).contains("Estado: CERRADA");
+            assertThat(closedPdfText).contains("Atendida:");
+            assertThat(closedPdfText).contains("Fecha de atención / cierre:");
+        }
 
         // 10. Warehouse Stock Replenishment (EXT04) + Movements + ML Forecast Dashboard & Recalculate
         var repReq = new StockReplenishmentRequest(
